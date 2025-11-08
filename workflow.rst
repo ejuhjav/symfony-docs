@@ -194,6 +194,10 @@ You could define the workflow as follows:
                     ->to(['rejected']);
         };
 
+.. versionadded:: 7.4
+
+    The support for ``weight`` option was introduced in Symfony 7.4.
+
 .. tip::
 
     If you are creating your first workflows, consider using the ``workflow:dump``
