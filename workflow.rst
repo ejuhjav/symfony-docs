@@ -28,9 +28,12 @@ Symfony project run this command:
 Creating a Workflow
 -------------------
 
-A workflow is a process or a lifecycle that your objects go through. Each
-step or stage in the process is called a *place*. You also define *transitions*,
-which describe the action needed to get from one place to another.
+The workflow component provides an object-oriented way to define a process
+or the life cycle that an object undergoes. Each step or stage in the
+process is called a *place*, and each action that connects these places
+is called a *transition*. The options available for transitions depend
+on the workflow type; for more details, 
+:doc:`see article </workflow/workflow-and-state-machine>` 
 
 .. image:: /_images/components/workflow/states_transitions.png
     :alt: An example state diagram for a workflow, showing transitions and places.
@@ -39,9 +42,17 @@ A set of places and transitions creates a **definition**. A workflow needs
 a ``Definition`` and a way to write the states to the objects (i.e. an
 instance of a :class:`Symfony\\Component\\Workflow\\MarkingStore\\MarkingStoreInterface`.)
 
-Consider the following example for a blog post. A post can have these places:
-``draft``, ``reviewed``, ``rejected``, ``published``. You could define the workflow as
-follows:
+Consider the following example for a more advanced blog post process with the model
+supporting multiple parallel statuses as well as special weights for some transitions. A post
+can have these places: ``draft``, ``reviewed``, ``seo_finished``, ``design_finished``,
+``rejected``, ``published``. From these defined places, ``seo_finished``, ``design_finished``
+can be active simultanously. Additionally we can define that a blog post requires two 
+separate reviews to be eligible for further processing.
+
+.. image:: /_images/components/workflow/blogpost_advanced_transitions.png
+    :alt: An example state diagram for advanced blog post workflow.
+
+You could define the workflow as follows:
 
 .. configuration-block::
 
@@ -51,7 +62,7 @@ follows:
         framework:
             workflows:
                 blog_publishing:
-                    type: 'workflow' # or 'state_machine'
+                    type: 'workflow'
                     audit_trail:
                         enabled: true
                     marking_store:
@@ -63,17 +74,36 @@ follows:
                     places:          # defining places manually is optional
                         - draft
                         - reviewed
+                        - seo_finished
+                        - design_finished
                         - rejected
                         - published
                     transitions:
-                        to_review:
+                        review:
                             from: draft
-                            to:   reviewed
+                            to:
+                                - place: reviewed
+                                  weight: 2
+                        seo:
+                            from:
+                                - place: reviewed
+                                  weight: 2
+                            to:   seo_finished
+                        design:
+                            from:
+                                - place: reviewed
+                                  weight: 2
+                            to:   design_finished
                         publish:
-                            from: reviewed
+                            from:
+                                - seo_finished
+                                - design_finished
                             to:   published
                         reject:
-                            from: reviewed
+                            from: 
+                                - reviewed
+                                - seo_finished
+                                - design_finished
                             to:   rejected
 
     .. code-block:: xml
@@ -101,10 +131,12 @@ follows:
                     <!-- defining places manually is optional -->
                     <framework:place>draft</framework:place>
                     <framework:place>reviewed</framework:place>
+                    <framework:place>seo_finished</framework:place>
+                    <framework:place>design_finished</framework:place>
                     <framework:place>rejected</framework:place>
                     <framework:place>published</framework:place>
 
-                    <framework:transition name="to_review">
+                    <framework:transition name="review">
                         <framework:from>draft</framework:from>
                         <framework:to>reviewed</framework:to>
                     </framework:transition>
@@ -141,11 +173,13 @@ follows:
             // defining places manually is optional
             $blogPublishing->place()->name('draft');
             $blogPublishing->place()->name('reviewed');
+            $blogPublishing->place()->name('seo_finished');
+            $blogPublishing->place()->name('design_finished');
             $blogPublishing->place()->name('rejected');
             $blogPublishing->place()->name('published');
 
             $blogPublishing->transition()
-                ->name('to_review')
+                ->name('review')
                     ->from(['draft'])
                     ->to(['reviewed']);
 
@@ -170,7 +204,7 @@ follows:
     You can use PHP constants in YAML files via the ``!php/const `` notation.
     E.g. you can use ``!php/const App\Entity\BlogPost::STATE_DRAFT`` instead of
     ``'draft'`` or ``!php/const App\Entity\BlogPost::TRANSITION_TO_REVIEW``
-    instead of ``'to_review'``.
+    instead of ``'review'``.
 
 .. tip::
 
@@ -280,11 +314,11 @@ what actions are allowed on a blog post::
 
     $workflow = $this->container->get('workflow.blog_publishing');
     $workflow->can($post, 'publish'); // False
-    $workflow->can($post, 'to_review'); // True
+    $workflow->can($post, 'review'); // True
 
     // Update the currentState on the post
     try {
-        $workflow->apply($post, 'to_review');
+        $workflow->apply($post, 'review');
     } catch (LogicException $exception) {
         // ...
     }
@@ -336,7 +370,7 @@ and transitions:
                     initial_marking: !php/enum App\Enumeration\BlogPostStatus::Draft
                     places: !php/enum App\Enumeration\BlogPostStatus
                     transitions:
-                        to_review:
+                        review:
                             from: !php/enum App\Enumeration\BlogPostStatus::Draft
                             to:   !php/enum App\Enumeration\BlogPostStatus::Reviewed
                         publish:
@@ -367,7 +401,7 @@ and transitions:
                     <framework:support>App\Entity\BlogPost</framework:support>
                     <framework:initial-marking>draft</framework:initial-marking>
 
-                    <framework:transition name="to_review">
+                    <framework:transition name="review">
                         <framework:from>draft</framework:from>
                         <framework:to>reviewed</framework:to>
                     </framework:transition>
@@ -404,7 +438,7 @@ and transitions:
             $blogPublishing->places(BlogPostStatus::cases());
 
             $blogPublishing->transition()
-                ->name('to_review')
+                ->name('review')
                     ->from(BlogPostStatus::Draft)
                     ->to([BlogPostStatus::Reviewed]);
 
@@ -565,7 +599,7 @@ For example, to inject the ``blog_publishing`` workflow defined earlier::
         {
             try {
                 // update the currentState on the post
-                $this->blogPublishingWorkflow->apply($post, 'to_review');
+                $this->blogPublishingWorkflow->apply($post, 'review');
             } catch (LogicException $exception) {
                 // ...
             }
@@ -829,7 +863,7 @@ workflow leaves a place::
 If some listeners update the context during a transition, you can retrieve
 it via the marking::
 
-    $marking = $workflow->apply($post, 'to_review');
+    $marking = $workflow->apply($post, 'review');
 
     // contains the new value
     $marking->getContext();
@@ -905,7 +939,7 @@ missing a title::
         public static function getSubscribedEvents(): array
         {
             return [
-                'workflow.blog_publishing.guard.to_review' => ['guardReview'],
+                'workflow.blog_publishing.guard.review' => ['guardReview'],
             ];
         }
     }
@@ -992,7 +1026,7 @@ You can also disable a specific event from being fired when applying a transitio
     $workflow = $this->container->get('workflow.blog_publishing');
 
     try {
-        $workflow->apply($post, 'to_review', [
+        $workflow->apply($post, 'review', [
             Workflow::DISABLE_ANNOUNCE_EVENT => true,
             Workflow::DISABLE_LEAVE_EVENT => true,
         ]);
@@ -1074,7 +1108,7 @@ transition. The value of this option is any valid expression created with the
                 blog_publishing:
                     # previous configuration
                     transitions:
-                        to_review:
+                        review:
                             # the transition is allowed only if the current user has the ROLE_REVIEWER role.
                             guard: "is_granted('ROLE_REVIEWER')"
                             from: draft
@@ -1107,7 +1141,7 @@ transition. The value of this option is any valid expression created with the
 
                     <!-- ... previous configuration -->
 
-                    <framework:transition name="to_review">
+                    <framework:transition name="review">
                         <!-- the transition is allowed only if the current user has the ROLE_REVIEWER role. -->
                         <framework:guard>is_granted("ROLE_REVIEWER")</framework:guard>
                         <framework:from>draft</framework:from>
@@ -1143,7 +1177,7 @@ transition. The value of this option is any valid expression created with the
             // ... previous configuration
 
             $blogPublishing->transition()
-                ->name('to_review')
+                ->name('review')
                     // the transition is allowed only if the current user has the ROLE_REVIEWER role.
                     ->guard('is_granted("ROLE_REVIEWER")')
                     ->from(['draft'])
@@ -1321,7 +1355,7 @@ The following example shows these functions in action:
     {% if workflow_can(post, 'publish') %}
         <a href="...">Publish</a>
     {% endif %}
-    {% if workflow_can(post, 'to_review') %}
+    {% if workflow_can(post, 'review') %}
         <a href="...">Submit to review</a>
     {% endif %}
     {% if workflow_can(post, 'reject') %}
@@ -1376,7 +1410,7 @@ be only the title of the workflow or very complex objects:
                                 max_num_of_words: 500
                         # ...
                     transitions:
-                        to_review:
+                        review:
                             from: draft
                             to:   review
                             metadata:
@@ -1410,7 +1444,7 @@ be only the title of the workflow or very complex objects:
                         </framework:metadata>
                     </framework:place>
                     <!-- ... -->
-                    <framework:transition name="to_review">
+                    <framework:transition name="review">
                         <framework:from>draft</framework:from>
                         <framework:to>review</framework:to>
                         <framework:metadata>
@@ -1453,7 +1487,7 @@ be only the title of the workflow or very complex objects:
             // ...
 
             $blogPublishing->transition()
-                ->name('to_review')
+                ->name('review')
                     ->from(['draft'])
                     ->to(['reviewed'])
                     ->metadata([
@@ -1551,11 +1585,11 @@ In Twig templates, metadata is available via the ``workflow_metadata()`` functio
         </ul>
     </p>
     <p>
-        <strong>to_review Priority</strong>
+        <strong>review Priority</strong>
         <ul>
             <li>
-                to_review:
-                <code>{{ workflow_metadata(blog_post, 'priority', workflow_transition(blog_post, 'to_review')) }}</code>
+                review:
+                <code>{{ workflow_metadata(blog_post, 'priority', workflow_transition(blog_post, 'review')) }}</code>
             </li>
         </ul>
     </p>

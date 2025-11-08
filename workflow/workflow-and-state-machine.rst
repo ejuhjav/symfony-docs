@@ -4,15 +4,18 @@ Workflows and State Machines
 Workflows
 ---------
 
-A workflow is a model of a process in your application. It may be the process of
-how a blog post goes from draft to review and publish. Another example is when a
-user submits a series of different forms to complete a task. Such processes are
-best kept away from your models and should be defined in configuration.
+The workflow component provides an object-oriented way to define a process
+or the life cycle that an object undergoes. Each step or stage in the
+process is called a **place**, and each action that connects these places
+is called a **transition**. 
 
-A **definition** of a workflow consists of places and actions to get from one
-place to another. The actions are called **transitions**. A workflow also needs to
-know each object's position in the workflow. The **marking store** writes
-the current place to a property on the object.
+A workflow also needs to know each object's position in the workflow.
+The **marking store** writes the current place to a property on the object.
+
+Workflow could model the process of how a blog post goes from draft to review
+and publish. Another example could be an application where a user needs to 
+submits a series of different forms to complete a task. This kind of processes
+are best kept away from your models and should be defined in configuration.
 
 .. note::
 
@@ -51,6 +54,8 @@ your model. The most important differences between them are:
 
 * Workflows can be in more than one place at the same time, whereas state
   machines can't;
+* Workflows can define custom weights for transitions defining how many times
+  the transitions are expected to be applied, whereas state machine can't;
 * In order to apply a transition, workflows require that the object is in all
   the previous places of the transition, whereas state machines only require
   that the object is at least in one of those places.

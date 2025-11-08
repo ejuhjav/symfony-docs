@@ -16,21 +16,23 @@ Installation
 Creating a Workflow
 -------------------
 
-The workflow component gives you an object oriented way to define a process
-or a life cycle that your object goes through. Each step or stage in the
-process is called a *place*. You do also define *transitions* that describe
-the action to get from one place to another.
+The workflow component provides an object-oriented way to define a process
+or the life cycle that an object undergoes. Each step or stage in the
+process is called a *place*, and each action that connects these places
+is called a *transition*. The options available for transitions depend
+on the workflow type; for more details, 
+:doc:`see article </workflow/workflow-and-state-machine>` 
 
 .. image:: /_images/components/workflow/states_transitions.png
     :alt: An example state diagram for a workflow, showing transitions and places.
 
-A set of places and transitions creates a **definition**. A workflow needs
+A set of places and transitions creates a *definition*. A workflow needs
 a ``Definition`` and a way to write the states to the objects (i.e. an
 instance of a :class:`Symfony\\Component\\Workflow\\MarkingStore\\MarkingStoreInterface`).
 
-Consider the following example for a blog post. A post can have one of a number
-of predefined statuses (``draft``, ``reviewed``, ``rejected``, ``published``). In a workflow,
-these statuses are called **places**. You can define the workflow like this::
+Consider the following example for a simple blog post process. A post can have these places:
+``draft``, ``reviewed``, ``rejected``, ``published``. You could define the workflow as
+follows:
 
     use Symfony\Component\Workflow\DefinitionBuilder;
     use Symfony\Component\Workflow\MarkingStore\MethodMarkingStore;
@@ -40,7 +42,7 @@ these statuses are called **places**. You can define the workflow like this::
     $definitionBuilder = new DefinitionBuilder();
     $definition = $definitionBuilder->addPlaces(['draft', 'reviewed', 'rejected', 'published'])
         // Transitions are defined with a unique name, an origin place and a destination place
-        ->addTransition(new Transition('to_review', 'draft', 'reviewed'))
+        ->addTransition(new Transition('review', 'draft', 'reviewed'))
         ->addTransition(new Transition('publish', 'reviewed', 'published'))
         ->addTransition(new Transition('reject', 'reviewed', 'rejected'))
         ->build()
@@ -55,6 +57,14 @@ The ``Workflow`` can now help you to decide what *transitions* (actions) are all
 on a blog post depending on what *place* (state) it is in. This will keep your domain
 logic in one place and not spread all over your application.
 
+Transitions can have *weight* defined that define how many time the transition
+is expected to be applied in the workflow. This option is available only for
+generic workflows using multiple states.
+
+.. versionadded:: 7.4
+
+    The support for ``weight`` option was introduced in Symfony 7.4.
+
 Usage
 -----
 
@@ -65,9 +75,9 @@ Here's an example of using the workflow defined above::
     $blogPost = new BlogPost();
 
     $workflow->can($blogPost, 'publish'); // False
-    $workflow->can($blogPost, 'to_review'); // True
+    $workflow->can($blogPost, 'review'); // True
 
-    $workflow->apply($blogPost, 'to_review'); // $blogPost is now in place "reviewed"
+    $workflow->apply($blogPost, 'review'); // $blogPost is now in place "reviewed"
 
     $workflow->can($blogPost, 'publish'); // True
     $workflow->getEnabledTransitions($blogPost); // $blogPost can perform transition "publish" or "reject"
