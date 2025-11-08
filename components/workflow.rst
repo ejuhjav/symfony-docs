@@ -18,21 +18,21 @@ Creating a Workflow
 
 The workflow component provides an object-oriented way to define a process
 or the life cycle that an object undergoes. Each step or stage in the
-process is called a *place*, and each action that connects these places
-is called a *transition*. The options available for transitions depend
+process is called a **place**, and each action that connects these places
+is called a **transition**. The options available for transitions depend
 on the workflow type; for more details, 
 :doc:`see article </workflow/workflow-and-state-machine>` 
 
 .. image:: /_images/components/workflow/states_transitions.png
     :alt: An example state diagram for a workflow, showing transitions and places.
 
-A set of places and transitions creates a *definition*. A workflow needs
-a ``Definition`` and a way to write the states to the objects (i.e. an
+A set of places and transitions creates a **definition**. A workflow needs
+a definition and a way to write the states to the objects (i.e. an
 instance of a :class:`Symfony\\Component\\Workflow\\MarkingStore\\MarkingStoreInterface`).
 
 Consider the following example for a simple blog post process. A post can have these places:
 ``draft``, ``reviewed``, ``rejected``, ``published``. You could define the workflow as
-follows:
+follows::
 
     use Symfony\Component\Workflow\DefinitionBuilder;
     use Symfony\Component\Workflow\MarkingStore\MethodMarkingStore;
@@ -53,11 +53,11 @@ follows:
     $marking = new MethodMarkingStore($singleState, $property);
     $workflow = new Workflow($definition, $marking);
 
-The ``Workflow`` can now help you to decide what *transitions* (actions) are allowed
-on a blog post depending on what *place* (state) it is in. This will keep your domain
+The ``Workflow`` can now help you to decide what transitions (actions) are allowed
+on a blog post depending on what place (state) it is in. This will keep your domain
 logic in one place and not spread all over your application.
 
-Transitions can have *weight* defined that define how many time the transition
+Transitions can have weight defined that define how many time the transition
 is expected to be applied in the workflow. This option is available only for
 generic workflows using multiple states.
 

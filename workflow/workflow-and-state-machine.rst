@@ -54,7 +54,7 @@ your model. The most important differences between them are:
 
 * Workflows can be in more than one place at the same time, whereas state
   machines can't;
-* Workflows can define custom weights for transitions defining how many times
+* Workflows can define custom **weights** for transitions defining how many times
   the transitions are expected to be applied, whereas state machine can't;
 * In order to apply a transition, workflows require that the object is in all
   the previous places of the transition, whereas state machines only require

@@ -30,8 +30,8 @@ Creating a Workflow
 
 The workflow component provides an object-oriented way to define a process
 or the life cycle that an object undergoes. Each step or stage in the
-process is called a *place*, and each action that connects these places
-is called a *transition*. The options available for transitions depend
+process is called a **place**, and each action that connects these places
+is called a **transition**. The options available for transitions depend
 on the workflow type; for more details, 
 :doc:`see article </workflow/workflow-and-state-machine>` 
 
@@ -43,8 +43,8 @@ a ``Definition`` and a way to write the states to the objects (i.e. an
 instance of a :class:`Symfony\\Component\\Workflow\\MarkingStore\\MarkingStoreInterface`.)
 
 Consider the following example for a more advanced blog post process with the model
-supporting multiple parallel statuses as well as special weights for some transitions. A post
-can have these places: ``draft``, ``reviewed``, ``seo_finished``, ``design_finished``,
+supporting multiple parallel statuses as well as special **weights** for some transitions. A
+post can have these places: ``draft``, ``reviewed``, ``seo_finished``, ``design_finished``,
 ``rejected``, ``published``. From these defined places, ``seo_finished``, ``design_finished``
 can be active simultanously. Additionally we can define that a blog post requires two 
 separate reviews to be eligible for further processing.
